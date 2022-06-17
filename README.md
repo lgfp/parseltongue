@@ -3,7 +3,7 @@ A set of tools to play and interact with word games (such as wordle)
 in Python (hence the name).
 
 In this repo there are the dictionary and answers for NYT Wordle
-(under `wordle/`) and [@fserb][1]'s Termo (under `term.ooo`), so you
+(under `wordle/`) and [@fserb][1]'s Termo (under `term.ooo/`), so you
 can start playing right away.
 
 ## Features:
