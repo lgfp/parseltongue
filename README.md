@@ -3,7 +3,7 @@ A set of tools to play and interact with word games (such as wordle)
 in Python (hence the name).
 
 In this repo there are the dictionary and answers for NYT Wordle
-(under `wordle/`) and @fserb's Termo (under `term.ooo`), so you
+(under `wordle/`) and [@fserb][1]'s Termo (under `term.ooo`), so you
 can start playing right away.
 
 ## Features:
@@ -24,7 +24,8 @@ dictionaries / solutions (lemot? hogwartle?) or different strategies
 or solvers.
 
 ## TODO
-* Improve cmdline arguments
-* Make "computer" better at solving multi-word games
-* Make the display of the game a plugin 
+- [ ] Improve cmdline arguments
+- [ ] Make "computer" better at solving multi-word games
+- [ ] Make the display of the game a plugin 
 
+[1]: https://github.com/fserb
