@@ -12,6 +12,10 @@ class Engine:
         self._words = load_file_as_list(words_file)
         self._hard_mode = hard_mode
 
+    @property
+    def hard_mode(self):
+        return self._hard_mode
+
     def is_answer(self, guess: str) -> bool:
         return guess in self._answers
 

@@ -1,87 +1,15 @@
-import logging
-from random import choice, sample
-from typing import Iterable, List, Optional
+#!/usr/bin/env python3
 
-from gameplay import Guidance, RemainingAnswerGuidance, CompleteGuidance
+import logging
+from random import sample
+
+from evaluators import KnownAnswerEvaluator, InputEvaluator
+from gameplay import Guidance, RemainingAnswerGuidance, CompleteGuidance, multitracker
 from gameplay import guidance, SpaceSearch, HumanPlayer
 # TODO: do not depend on computer
 from gameplay.computer import Computer
-from model import Engine, MutableEngine, MaskInstance, Mask
+from model import Engine, MutableEngine
 from strategies import Heuristic
-
-
-class Visitor:
-    def visit(self, guess: str, mask: Optional[Mask] = None):
-        raise NotImplementedError
-
-
-class Evaluator:
-    visitor: List[Visitor] = None
-
-    def evaluate(self, guess) -> Iterable[MaskInstance]:
-        raise NotImplementedError
-
-    def answer_found(self, guess):
-        raise NotImplementedError
-
-    def add_visitor(self, visitor: Visitor):
-        if self.visitor is None: self.visitor = []
-        self.visitor.append(visitor)
-
-    @property
-    def _visitors(self):
-        return self.visitor if self.visitor else []
-
-
-class KnownAnswerEvaluator(Evaluator):
-    def __init__(self, *answer: str):
-        self.__answers = list(answer)
-
-    def evaluate(self, guess):
-        masks = [MaskInstance.for_answer(answer, guess) for answer in self.__answers]
-        for visitor in self._visitors:
-            for mask in masks:
-                visitor.visit(guess, mask.mask)
-        return masks
-
-    def answer_found(self, guess):
-        self.__answers.remove(guess)
-
-
-class InputEvaluator(Evaluator):
-    def __init__(self, n_masks: int = 1):
-        self.__n_masks = n_masks
-
-    def evaluate(self, guess) -> Iterable[MaskInstance]:
-        def single_mask():
-            result_raw = input("Result (0 for gray, 1 for yellow, 2 for green, no spaces): ")
-            mask = Mask([int(i) for i in list(result_raw)])
-            return MaskInstance(mask, guess)
-
-        masks = [single_mask() for _ in range(self.__n_masks)]
-        for visitor in self._visitors:
-            for mask in masks:
-                visitor.visit(guess, mask.mask)
-        return masks
-
-    def answer_found(self, guess):
-        self.__n_masks = self.__n_masks - 1
-
-
-class GuessQualityVisitor(Visitor):
-    def __init__(self, engine: Engine):
-        self.__engine = engine
-
-    def visit(self, guess, mask=None):
-        grouping = self.__engine.compute_grouping(guess)
-        grouping_values = grouping.values()
-        n_groups = len(grouping_values)
-        remaining = sum(len(group) for group in grouping_values)
-        print("Your guess divides the space in %d groups among %d remaining answers" % (n_groups, remaining))
-        if mask:
-            print("Based on %s, this means there are %d remaining answers, such as %s"
-                  % (mask, len(grouping[mask]), choice(grouping[mask])))
-
 
 from argparse import ArgumentParser, BooleanOptionalAction
 
@@ -118,27 +46,20 @@ def main():
     argp.add_argument("--quantity", type=int, default=1, help="Number of words in the game.")
     argp.add_argument("--guide-first", action=BooleanOptionalAction, help="Give guidance for first guess")
     argp.add_argument("--first-words", type=str, nargs='+', help="When running the solver, choose its first words")
+    argp.add_argument("--debug", action=BooleanOptionalAction, default=False)
 
     arguments = argp.parse_args()
+    if arguments.debug:
+        logging.root.setLevel(logging.DEBUG)
+
+    if arguments.answers or arguments.random_answers:
+        arguments.evaluator = "answers"
 
     engine = MutableEngine(arguments.solutions, arguments.dictionary, hard_mode=arguments.hard)
     computer = Computer(engine)
 
     if arguments.mode == "stats":
         stats(engine)
-
-    if arguments.guidance == "remaining":
-        guide = RemainingAnswerGuidance(engine)
-    elif arguments.guidance == "computer":
-        guide = CompleteGuidance(engine, computer, not arguments.guide_first)
-    else:
-        guide = Guidance()
-
-    if arguments.mode == "solve":
-        # TODO: Allow strategy to be chosen
-        solver = SpaceSearch(computer, strategy=Heuristic())
-    else:
-        solver = HumanPlayer(engine, guide)
 
     answers = []
     if arguments.evaluator == "answers":
@@ -152,6 +73,23 @@ def main():
     else:
         evaluator = InputEvaluator(arguments.quantity)
         n = arguments.quantity
+
+    if arguments.guidance == "remaining":
+        guide = RemainingAnswerGuidance(engine)
+    elif arguments.guidance == "computer":
+        if n > 1:
+            immutable_engine = Engine(answers_file=arguments.solutions, words_file=arguments.dictionary, hard_mode=arguments.hard)
+            guide = multitracker.Multitracker(immutable_engine, n, not arguments.guide_first)
+        else:
+            guide = CompleteGuidance(engine, computer, not arguments.guide_first)
+    else:
+        guide = Guidance()
+
+    if arguments.mode == "solve":
+        # TODO: Allow strategy to be chosen
+        solver = SpaceSearch(computer, Heuristic(), *arguments.first_words)
+    else:
+        solver = HumanPlayer(engine, guide)
 
     remaining = n
     for op in range(5 + remaining):

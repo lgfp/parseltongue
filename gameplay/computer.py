@@ -39,8 +39,8 @@ class Computer:
         for i, word in enumerate(words):
             groups = self.__engine.compute_grouping(word)
             # This means that this does not help us
-            if (len(groups) == 1) and not self.__engine.is_answer(word):
-                continue
+            #if (len(groups) == 1) and not self.__engine.is_answer(word):
+            #    continue
             computed[word] = groups
             if logging.root.level <= logging.DEBUG:
                 print("Progress: %.02f%%" % (100 * i / n_words), end='\r')

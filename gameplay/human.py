@@ -3,7 +3,6 @@ from model.engine import Engine
 from model.masks import MaskInstance
 from gameplay.player import Player
 
-
 class HumanPlayer(Player):
     def __init__(self, engine: Engine, guidance: Guidance = Guidance()):
         self.__engine = engine
@@ -22,3 +21,4 @@ class HumanPlayer(Player):
 
     def accept(self, *mask: MaskInstance):
         self.__engine = self.__engine.pruned(*mask)
+        self.__guide.commit(*mask)

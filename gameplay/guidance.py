@@ -1,15 +1,20 @@
+from functools import partial
 from typing import Iterable, Tuple
 
+from ai.guess import Guess, Sorters, coalesce
 from .computer import Computer
-from model import Engine, Grouping
+from model import Engine, Grouping, MaskInstance
 
 
 class Guidance:
     def guide(self):
         pass
 
+    def commit(self, mi: MaskInstance):
+        pass
 
-class RemainingAnswerGuidance:
+
+class RemainingAnswerGuidance(Guidance):
     def __init__(self, engine: Engine):
         self.__engine = engine
 
@@ -28,14 +33,30 @@ class CompleteGuidance(Guidance):
 
     def guide(self):
         if not (self.__skip_first and self.__first):
-            stats(self.__engine.eligible_answers, self.__computer.solution_space, cutoff=5)
+            # stats(self.__engine.eligible_answers, self.__computer.solution_space, cutoff=5)
+            self.new_stats()
         self.__first = False
         self.__computer.bust()
+
+    def new_stats(self):
+        guesses: Iterable[Guess] = [Guess(guess, grouping) for guess, grouping in
+                                    self.__computer.solution_space.items()]
+
+        cutoff = 8
+        for name, sorting in {
+            "most splitting": Sorters.most_splits,
+            "best worst case scenario": Sorters.worst_case_scenario,
+            "best median": partial(Sorters.percentile, percentile=50),
+        }.items():
+            print("\nUp to %d %s guesses:" % (cutoff, name))
+            sortie = sorted(guesses, key=sorting)
+            for guess in coalesce(sortie, await_eligible=True, count=cutoff):
+                print(guess)
 
 
 def stats(answers, sol_space, cutoff: int = 10):
     if len(answers) == 1:
-        print("\nThere's only one eligible answer to the game:\n* %s" % next(answers.__iter__()))
+        print("\nThere's only one eligible answer to the game:\n+ %s" % next(answers.__iter__()))
         return
 
     print("Words with a star to their left are one of %d eligible answers to the game" % len(answers))
@@ -72,8 +93,8 @@ def stats(answers, sol_space, cutoff: int = 10):
         return hit_it_big, n_splits, is_answer, -worst_case
 
     most_all_in = gen_best(sorted(sol_space.items(),
-                         key=lambda s: sort_by_allin(s[1], s[0] in answers),
-                         reverse=True), cutoff)
+                                  key=lambda s: sort_by_allin(s[1], s[0] in answers),
+                                  reverse=True), cutoff)
     for word, grouping in most_all_in:
         hit_it_big, n_splits, is_answer, worst_case = sort_by_allin(grouping, word in answers)
         print(
@@ -87,14 +108,14 @@ def stats(answers, sol_space, cutoff: int = 10):
         return worst_case, -n_splits, not is_answer
 
     best_of_worst = gen_best(sorted(sol_space.items(),
-                           key=lambda s: sort_by_wcs(s[1], s[0] in answers)), cutoff)
+                                    key=lambda s: sort_by_wcs(s[1], s[0] in answers)), cutoff)
     for word, grouping in best_of_worst:
         n_splits, worst_case, is_answer = sort_by_slices(grouping, word in answers)
         print("%s%s: has worst case scenario sized %d and divides space in %d splits " %
               ("* " if is_answer else "  ", word, -worst_case, n_splits))
 
     print("\nTop %d solutions that divide the solution space the most" % cutoff)
-    best_solutions = list(filter(lambda b: b[0] in answers, base_sorting))[:cutoff]
+    best_solutions = list(coalesce(lambda b: b[0] in answers, base_sorting))[:cutoff]
     for word, grouping in best_solutions:
         n_splits, worst_case, is_answer = sort_by_slices(grouping, word in answers)
         print("* %s: has worst case scenario sized %d and divides space in %d splits " %
