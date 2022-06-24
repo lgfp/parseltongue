@@ -1,6 +1,8 @@
 import copy
 import hashlib
+import itertools
 import logging
+from functools import cached_property
 
 from .common import load_file_as_list, Grouping
 from .masks import MaskInstance
@@ -35,6 +37,7 @@ class Engine:
             pruned._words = [pw for pw in self._words if any(mi.matches(pw) for mi in mask_instances)]
         else:
             pruned._words = self._words
+        print(list(itertools.islice(pruned._answers, 5)))
         return pruned
 
     def _prune_answers(self, mask_instances):
@@ -47,7 +50,9 @@ class Engine:
                 solutions_already_found.add(this_answers[0])
                 continue
             answers = answers.union(this_answers)
-        return answers - solutions_already_found
+        pruned_answers = answers - solutions_already_found
+        print(mask_instances, len(pruned_answers))
+        return pruned_answers
 
     def game_id(self) -> str:
         logging.debug("Calculating hash for universe")
@@ -65,6 +70,9 @@ class Engine:
 
     def acceptable_guess(self, guess: str) -> bool:
         return guess in self._words
+
+    def only_answer(self, guess: str):
+        return self._answers == [guess]
 
 
 class MutableEngine(Engine):

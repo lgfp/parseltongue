@@ -4,7 +4,7 @@ import logging
 from random import sample
 
 from evaluators import KnownAnswerEvaluator, InputEvaluator
-from gameplay import Guidance, RemainingAnswerGuidance, CompleteGuidance, multitracker
+from gameplay import Guidance, RemainingAnswerGuidance, CompleteGuidance, multitracker, multitracker2
 from gameplay import guidance, SpaceSearch, HumanPlayer
 # TODO: do not depend on computer
 from gameplay.computer import Computer
@@ -77,11 +77,11 @@ def main():
     if arguments.guidance == "remaining":
         guide = RemainingAnswerGuidance(engine)
     elif arguments.guidance == "computer":
-        if n > 1:
-            immutable_engine = Engine(answers_file=arguments.solutions, words_file=arguments.dictionary, hard_mode=arguments.hard)
-            guide = multitracker.Multitracker(immutable_engine, n, not arguments.guide_first)
-        else:
-            guide = CompleteGuidance(engine, computer, not arguments.guide_first)
+        #if n > 1:
+        immutable_engine = Engine(answers_file=arguments.solutions, words_file=arguments.dictionary, hard_mode=arguments.hard)
+        guide = multitracker2.Multitracker2(immutable_engine, n, not arguments.guide_first)
+        #else:
+        #    guide = CompleteGuidance(engine, computer, not arguments.guide_first)
     else:
         guide = Guidance()
 

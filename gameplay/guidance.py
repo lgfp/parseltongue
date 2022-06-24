@@ -1,7 +1,8 @@
 from functools import partial
 from typing import Iterable, Tuple
 
-from ai.guess import Guess, Sorters, coalesce
+from model.guess import Guess, coalesce
+from ai.sorting import Sorters
 from .computer import Computer
 from model import Engine, Grouping, MaskInstance
 
